@@ -5,7 +5,7 @@ object MarkdownParser {
         val codeList = mutableListOf<Pair<String,String>>()
         var preprocess = "```([A-Za-z0-9-_]*)\n([\\W\\w]*?)```".toRegex(RegexOption.MULTILINE).replace(markdown) {
             codeList.add(Pair(it.groupValues[1],it.groupValues[2]))
-            "<code id=\"${codeList.size-1}\"/>"
+            "<pre id=\"${codeList.size-1}\"/>"
         }
 
         preprocess = preprocess.run {
@@ -21,7 +21,7 @@ object MarkdownParser {
                 .makeTable()
                 .makeParagraph()
                 //代码还原
-                .replace("""<code id="([0-9]+)"/>""".toRegex(RegexOption.MULTILINE)) {
+                .replace("""<pre id="([0-9]+)"/>""".toRegex(RegexOption.MULTILINE)) {
                     try {
                         val id = it.groupValues[1].toInt()
                         if (codeList.size > id) {
