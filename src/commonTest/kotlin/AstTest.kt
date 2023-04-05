@@ -20,7 +20,7 @@ class AstTest {
     @Test
     fun simpleTest3(){
         // 属性测试
-        val raw = """<center/><h1 class=1 attr="Hello" checked> 你好<p>就斤斤计较</p> </aa></h1>"""
+        val raw = """<center/><h1 class=1 attr="Hello" checked> 你好<p>Hello</p> </aa></h1>"""
         val tree = AstParser.parse(raw)
         println("\n=======")
         println(tree)

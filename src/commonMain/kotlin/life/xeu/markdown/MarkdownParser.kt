@@ -1,17 +1,28 @@
 package life.xeu.markdown
 
+import life.xeu.markdown.MarkdownParser.makeLinkAndImage
+
 object MarkdownParser {
+
+
+    // 预处理链接 & 图片
+    private fun String.preprocessLinkAndImage() = this
     fun parse(markdown: String): String {
         val codeList = mutableListOf<Pair<String,String>>()
+        val linkList = mutableListOf<String>()
         var preprocess = "```([A-Za-z0-9-_]*)\n([\\W\\w]*?)```".toRegex(RegexOption.MULTILINE).replace(markdown) {
             codeList.add(Pair(it.groupValues[1],it.groupValues[2]))
             "<pre id=\"${codeList.size-1}\"/>"
         }
-
+        preprocess = """\[([^\n]*?)\]\(([^\n]*?)\)""".toRegex().replace(preprocess){
+            linkList.add(it.groupValues[2])
+            "[${it.groupValues[1]}](<link>${linkList.size-1}</link>)"
+        }
         preprocess = preprocess.run {
             trim().plus("\n")
                 .makeDivider()
                 .makeFastLink()
+                .preprocessLinkAndImage()
                 .makeHeadingAtx()
                 .makeEmphasize()
                 .makeQuote()
@@ -21,13 +32,25 @@ object MarkdownParser {
                 .makeTable()
                 .makeParagraph()
                 //代码还原
-                .replace("""<pre id="([0-9]+)"/>""".toRegex(RegexOption.MULTILINE)) {
+                .replace("""<pre id="([0-9]+)"/>""".toRegex()) {
                     try {
                         val id = it.groupValues[1].toInt()
                         if (codeList.size > id) {
                             val code = codeList[id]
                             val lang = if(code.first.isNotBlank()) """language="${code.first}"""" else ""
                             """<pre $lang>${code.second}</pre>"""
+                        } else {
+                            it.value
+                        }
+                    } catch (e: Exception) {
+                        it.value
+                    }
+                } // 链接还原
+                .replace("""<link>([0-9]+)</link>""".toRegex()) {
+                    try {
+                        val id = it.groupValues[1].toInt()
+                        if (linkList.size > id) {
+                            linkList[id]
                         } else {
                             it.value
                         }
@@ -42,7 +65,7 @@ object MarkdownParser {
 
     // 待办事项勾选框
     private fun String.makeCheckBox() =
-        this.replace("""\[([xX ])] ([^\n]+${'$'})""".toRegex(RegexOption.MULTILINE)) {
+        this.replace("""\[([xX ])\] ([^\n]+${'$'})""".toRegex(RegexOption.MULTILINE)) {
             val values = it.groupValues
             val check = values.get(1)
             val label = values.get(2)
@@ -121,11 +144,11 @@ object MarkdownParser {
 
     // 强调
     private fun String.makeEmphasize() = this
-        .replace("""\*\*([^*\n]*?)\*\*""".toRegex(), "<strong>$1</strong>")
-        .replace("""\*([^*\n]*?)\*""".toRegex(), "<em>$1</em>")
-        .replace("""__([^\n_]*?)__""".toRegex(), "<strong>$1</strong>")
-        .replace("""_([^\n_]*?)_""".toRegex(), "<em>$1</em>")
-        .replace("""~~([^\n_]*?)~~""".toRegex(), "<del>$1</del>")
+        .replace("""\*\*([^*\n][^\n]*?)\*\*""".toRegex(), "<strong>$1</strong>")
+        .replace("""\*([^*\n]+?)\*""".toRegex(), "<em>$1</em>")
+        .replace("""__([^_\n][^\n]*?)__""".toRegex(), "<strong>$1</strong>")
+        .replace("""_([^\n_]+?)_""".toRegex(), "<em>$1</em>")
+        .replace("""~~([^\n_]+?)~~""".toRegex(), "<del>$1</del>")
 
     // 代码块
     private fun String.makeCodeBlock() = this
@@ -172,8 +195,8 @@ object MarkdownParser {
 
     // 链接 & 图片
     private fun String.makeLinkAndImage() = this
-        .replace("""!\[([^\n_]*?)]\(([^\n_ ]*?)\)""".toRegex(), """<img src="$2">$1</img>""")
-        .replace("""\[([^\n_]*?)]\(([^\n_ ]*?)\)""".toRegex(), """<a href="$2">$1</a>""")
+        .replace("""!\[([^\n]*?)\]\(([^\n]*?)\)""".toRegex(), """<br/><img src="$2">$1</img><br/>""")
+        .replace("""\[([^\n]*?)\]\(([^\n]*?)\)""".toRegex(), """<a href="$2">$1</a>""")
 
 }
 // ___ Bold ___

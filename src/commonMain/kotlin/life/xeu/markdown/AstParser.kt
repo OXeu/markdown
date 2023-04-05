@@ -6,25 +6,40 @@ package life.xeu.markdown
  * - element and its key-value pairs (including none value key)
  * - comment
  */
+sealed class Node {
+    abstract fun string(): String
+}
 
-sealed class Node
+// <tag attr="value" checked> <sub/> Text </tag>
 data class Element(
     val name: String,
     val attrs: Map<String, String?> = mapOf(),
     val children: MutableList<Node> = mutableListOf()
 ) : Node() {
+    override fun string(): String {
+        return (if (children.isEmpty()) "" else
+            children.joinToString(",\n", prefix = "\n", postfix = "\n") {
+                it.string()
+            }).trimMargin()
+    }
+
     override fun toString(): String {
         return """$name(${attrs.map { map -> "${map.key} => ${map.value}" }.joinToString(", ")}){${
             if (children.isEmpty()) "" else
-            children.joinToString(",\n", prefix = "\n", postfix = "\n") {
-                it.toString().prependIndent()
-            }}}""".trimMargin()
+                children.joinToString(",\n", prefix = "\n", postfix = "\n") {
+                    it.toString().prependIndent()
+                }
+        }}""".trimMargin()
     }
 }
 
 data class Text(val value: String) : Node() {
-    override fun toString(): String {
+    override fun string(): String {
         return value
+    }
+
+    override fun toString(): String {
+        return "text($value)"
     }
 }
 
@@ -81,8 +96,8 @@ object AstParser {
                                     if (closeTag) {
                                         popNode(tagNameCache)
                                     } else {
-                                        pushNode(Element(tagNameCache,attrsCache.toMap()))
-                                        if (selfClose){
+                                        pushNode(Element(tagNameCache, attrsCache.toMap()))
+                                        if (selfClose) {
                                             popNode(tagNameCache)
                                         }
                                     }
@@ -101,7 +116,7 @@ object AstParser {
                             '/' -> {
                                 if (tagNameCache.isBlank() && !closeTag) {
                                     closeTag = true
-                                }else{
+                                } else {
                                     selfClose = true
                                 }
                                 pos += 1
